@@ -35,9 +35,18 @@ def can_mark_pond_drawn(pond: Pond) -> tuple[bool, str]:
     return True, ""
 
 
+def assert_pond_accepts_peak_edit(pond: Pond) -> None:
+    """已出灰池的峰值温度一律冻结：新建批次、登记/修正峰值都不允许。"""
+    if pond is not None and pond.status == Pond.STATUS_DRAWN:
+        raise RuleError(f"池 {pond.code} 已出灰，峰值温度已锁定，不能再登记或修改")
+
+
 def assert_can_set_pond_status(pond: Pond, new_status: str) -> None:
     if new_status not in Pond.STATUS_CHOICES:
         raise RuleError(f"无效状态：{new_status}")
+    # 已出灰是终态：不允许回拨到熟化中/注水中
+    if pond.status == Pond.STATUS_DRAWN and new_status != Pond.STATUS_DRAWN:
+        raise RuleError("池已出灰，状态锁定为「已出灰」，不能改回熟化中或注水中")
     if new_status == Pond.STATUS_DRAWN:
         ok, msg = can_mark_pond_drawn(pond)
         if not ok:

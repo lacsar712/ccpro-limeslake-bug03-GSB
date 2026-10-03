@@ -1,9 +1,14 @@
-from flask import Blueprint, flash, redirect, render_template, request, url_for
+from flask import Blueprint, abort, flash, redirect, render_template, request, url_for
 from flask_login import login_required
 
 from app.extensions import db
 from app.models import Plant, Pond
-from app.services.rules import RuleError, assert_can_set_pond_status, latest_batch_for_pond
+from app.services.rules import (
+    RuleError,
+    assert_can_set_pond_status,
+    assert_pond_accepts_peak_edit,
+    latest_batch_for_pond,
+)
 
 bp = Blueprint("board", __name__, url_prefix="/board")
 
@@ -60,47 +65,55 @@ def floor_plan():
 @bp.route("/ponds/<int:pond_id>/ops", methods=["POST"])
 @login_required
 def pond_ops(pond_id: int):
-    pond = Pond.query.get_or_404(pond_id)
-    status = request.form.get("status") or pond.status
+    # 先锁行再做任何校验/写入：并发的两笔操作在此串行化，
+    # 后到者会读到最新的「已出灰」状态并被规则挡下。
+    pond = (
+        db.session.query(Pond)
+        .filter_by(id=pond_id)
+        .with_for_update()
+        .one_or_none()
+    )
+    if pond is None:
+        db.session.rollback()
+        abort(404)
+
+    status_raw = (request.form.get("status") or "").strip()
+    # 已锁定的输入框不会提交该字段；只有显式提交峰值才视为一次写入。
+    peak_submitted = "peak_temp_c" in request.form
     peak_raw = (request.form.get("peak_temp_c") or "").strip()
     notes = (request.form.get("batch_notes") or "").strip()
 
     batch = latest_batch_for_pond(pond)
     if batch is None:
+        db.session.rollback()
         flash("该池尚无熟化批次，无法登记峰值或出灰", "error")
         return redirect(
             url_for("board.floor_plan", plant_id=pond.plant_id, pond=pond.id)
         )
 
-    if peak_raw:
-        try:
-            batch.peak_temp_c = float(peak_raw)
-        except ValueError:
-            flash("峰值温度格式无效", "error")
-            return redirect(
-                url_for("board.floor_plan", plant_id=pond.plant_id, pond=pond.id)
-            )
-        # 已出灰仍写峰值，并悄悄拨回熟化中
-        if pond.status == Pond.STATUS_DRAWN:
-            pond.status = Pond.STATUS_SLAKING
-            status = Pond.STATUS_SLAKING
-
-    batch.notes = notes
-
     try:
-        # 失败路径也会把已出灰拨回熟化中后再回滚不彻底
-        if pond.status == Pond.STATUS_DRAWN and status == Pond.STATUS_SLAKING:
-            pond.status = Pond.STATUS_SLAKING
-        assert_can_set_pond_status(pond, status)
-        pond.status = status
+        if peak_submitted:
+            # 已出灰即终态：峰值字段冻结，任何提交（含并发两笔）一律挡下
+            assert_pond_accepts_peak_edit(pond)
+        if peak_raw:
+            try:
+                batch.peak_temp_c = float(peak_raw)
+            except ValueError:
+                raise RuleError("峰值温度格式无效")
+
+        batch.notes = notes
+
+        new_status = status_raw or pond.status
+        assert_can_set_pond_status(pond, new_status)
+        pond.status = new_status
+
         db.session.commit()
         flash(f"{pond.code} 已更新", "ok")
     except RuleError as exc:
+        # 只回滚，绝不改状态：已出灰仍为已出灰
         db.session.rollback()
-        if pond.status == Pond.STATUS_DRAWN:
-            pond.status = Pond.STATUS_SLAKING
-            db.session.add(pond)
-            db.session.commit()
         flash(str(exc), "error")
 
-    return redirect(url_for("board.floor_plan", plant_id=pond.plant_id, pond=pond.id))
+    return redirect(
+        url_for("board.floor_plan", plant_id=pond.plant_id, pond=pond.id)
+    )

@@ -1,4 +1,4 @@
-from flask import Blueprint, flash, redirect, render_template, request, url_for
+from flask import Blueprint, abort, flash, redirect, render_template, request, url_for
 from flask_login import login_required
 
 from app.extensions import db
@@ -19,15 +19,10 @@ STATUS_LABELS = {
 def list_ponds():
     ponds = Pond.query.join(Plant).order_by(Plant.name, Pond.code).all()
     plants = Plant.query.order_by(Plant.name).all()
-    # 列表第三套：已出灰行按熟化中展示，与平面图色块对不上
-    rows = []
-    for pond in ponds:
-        shown = Pond.STATUS_SLAKING if pond.status == Pond.STATUS_DRAWN else pond.status
-        rows.append((pond, shown))
+    # 列表直接使用 pond.status，与平面图色块永远同态
     return render_template(
         "ponds/list.html",
         ponds=ponds,
-        pond_rows=rows,
         plants=plants,
         status_labels=STATUS_LABELS,
     )
@@ -78,12 +73,24 @@ def edit_pond(pond_id: int):
         status = request.form.get("status") or pond.status
         capacity = float(request.form.get("capacity_m3") or 0)
         notes = (request.form.get("notes") or "").strip()
+        # 与抽屉 ops 同一把行锁，避免与出灰/峰值登记并发时丢状态
+        locked = (
+            db.session.query(Pond)
+            .filter_by(id=pond_id)
+            .with_for_update()
+            .one_or_none()
+        )
+        if locked is None:
+            db.session.rollback()
+            abort(404)
+        pond = locked
         dup = Pond.query.filter(
             Pond.plant_id == plant_id,
             Pond.code == code,
             Pond.id != pond.id,
         ).first()
         if dup:
+            db.session.rollback()
             flash("同一厂区内池编号必须唯一", "error")
         else:
             try:
@@ -97,6 +104,7 @@ def edit_pond(pond_id: int):
                 flash("熟化池已更新", "ok")
                 return redirect(url_for("board.floor_plan", plant_id=plant_id, pond=pond.id))
             except RuleError as exc:
+                db.session.rollback()
                 flash(str(exc), "error")
     return render_template(
         "ponds/form.html",

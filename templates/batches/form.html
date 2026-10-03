@@ -22,7 +22,7 @@
     <input name="target_temp_c" type="number" step="0.1" value="{{ batch.target_temp_c if batch else 80 }}" required />
   </label>
   <label>峰值温度 ℃（可空）
-    <input name="peak_temp_c" type="number" step="0.1" value="{{ batch.peak_temp_c if batch and batch.peak_temp_c is not none else '' }}" />
+    <input name="peak_temp_c" type="number" step="0.1" value="{{ batch.peak_temp_c if batch and batch.peak_temp_c is not none else '' }}" {% if batch and batch.pond.status == 'drawn' %}disabled readonly title="所属池已出灰，峰值已锁定"{% endif %} />
   </label>
   <label>备注
     <textarea name="notes" rows="3">{{ batch.notes if batch else '' }}</textarea>

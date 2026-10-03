@@ -20,11 +20,11 @@
     </tr>
   </thead>
   <tbody>
-    {% for pond, shown in pond_rows %}
+    {% for pond in ponds %}
     <tr>
       <td>{{ pond.plant.name }}</td>
       <td>{{ pond.code }}</td>
-      <td><span class="badge badge-{{ shown }}">{{ status_labels.get(shown, shown) }}</span></td>
+      <td><span class="badge badge-{{ pond.status }}">{{ status_labels.get(pond.status, pond.status) }}</span></td>
       <td>{{ '%.1f'|format(pond.capacity_m3) }}</td>
       <td>{{ pond.notes }}</td>
       <td><a href="{{ url_for('ponds.edit_pond', pond_id=pond.id) }}">编辑</a></td>
