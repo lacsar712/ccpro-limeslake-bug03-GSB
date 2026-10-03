@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+{% block title %}熟化池平面图{% endblock %}
+{% block content %}
+<section
+  class="floor-page"
+  data-controller="board"
+  data-board-open-value="{{ 'true' if selected else 'false' }}"
+>
+  <header class="floor-head">
+    <div>
+      <h1>熟化池平面图</h1>
+      <p>按厂区查看池位状态；点选瓦片在右侧登记峰值并改状态。</p>
+    </div>
+    <div class="legend">
+      <span class="leg-item filling">注水中</span>
+      <span class="leg-item slaking">熟化中</span>
+      <span class="leg-item drawn">已出灰</span>
+    </div>
+  </header>
+
+  {% if plants %}
+  <div class="plant-chips" role="tablist" aria-label="厂区切换">
+    {% for plant in plants %}
+    <a
+      class="chip {% if active_plant and plant.id == active_plant.id %}active{% endif %}"
+      href="{{ url_for('board.floor_plan', plant_id=plant.id) }}"
+    >{{ plant.name }}</a>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% if active_plant %}
+  <p class="plant-meta">{{ active_plant.location or '厂区位置未填' }} · {{ pond_cards|length }} 个池位</p>
+  {% endif %}
+
+  <div class="pond-grid" role="list">
+    {% for card in pond_cards %}
+    {% set pond = card.pond %}
+    {% set batch = card.batch %}
+    <a
+      class="pond-tile status-{{ pond.status }} {% if selected and selected.id == pond.id %}selected{% endif %}"
+      role="listitem"
+      href="{{ url_for('board.floor_plan', plant_id=active_plant.id, pond=pond.id) }}"
+      data-action="click->board#openDrawer"
+    >
+      <span class="tile-code">{{ pond.code }}</span>
+      <span class="tile-status">{{ status_labels.get(pond.status, pond.status) }}</span>
+      <span class="tile-meta">
+        {% if batch and batch.peak_temp_c is not none %}
+          峰值 {{ '%.0f'|format(batch.peak_temp_c) }}℃
+        {% elif batch %}
+          峰值未记
+        {% else %}
+          无批次
+        {% endif %}
+      </span>
+      <span class="tile-cap">{{ '%.0f'|format(pond.capacity_m3) }} m³</span>
+    </a>
+    {% else %}
+    <p class="empty-board">当前厂区暂无熟化池</p>
+    {% endfor %}
+  </div>
+
+  <div
+    class="drawer-backdrop {% if selected %}is-open{% endif %}"
+    data-board-target="backdrop"
+    data-action="click->board#closeDrawer"
+  ></div>
+
+  <aside
+    class="drawer {% if selected %}is-open{% endif %}"
+    data-board-target="drawer"
+    aria-hidden="{{ 'false' if selected else 'true' }}"
+  >
+    {% if selected %}
+    <div class="drawer-head">
+      <div>
+        <h2>{{ selected.code }}</h2>
+        <p>{{ selected.plant.name }} · {{ status_labels.get(selected.status, selected.status) }}</p>
+      </div>
+      <a
+        class="drawer-close"
+        href="{{ url_for('board.floor_plan', plant_id=selected.plant_id) }}"
+        data-action="click->board#closeDrawer"
+        aria-label="关闭"
+      >×</a>
+    </div>
+
+    <div class="drawer-body">
+      <section class="batch-card">
+        <h3>最近熟化批次</h3>
+        {% if selected_batch %}
+        <dl class="kv">
+          <div><dt>开始</dt><dd>{{ selected_batch.started_at.strftime('%Y-%m-%d %H:%M') if selected_batch.started_at else '—' }}</dd></div>
+          <div><dt>目标</dt><dd>{{ '%.1f'|format(selected_batch.target_temp_c) }} ℃</dd></div>
+          <div><dt>峰值</dt><dd>{% if selected_batch.peak_temp_c is not none %}{{ '%.1f'|format(selected_batch.peak_temp_c) }} ℃{% else %}未记录{% endif %}</dd></div>
+          <div><dt>备注</dt><dd>{{ selected_batch.notes or '—' }}</dd></div>
+        </dl>
+        {% else %}
+        <p class="hint">尚无批次，无法出灰。</p>
+        {% endif %}
+      </section>
+
+      {% if selected_batch %}
+      <form
+        class="ops-form"
+        method="post"
+        action="{{ url_for('board.pond_ops', pond_id=selected.id) }}"
+        data-controller="form-hint"
+      >
+        <label>登记 / 修正峰值温度 ℃
+          <input
+            name="peak_temp_c"
+            type="number"
+            step="0.1"
+            value="{{ selected_batch.peak_temp_c if selected_batch.peak_temp_c is not none else '' }}"
+            placeholder="例如 72"
+          />
+        </label>
+        <label>批次备注
+          <textarea name="batch_notes" rows="2">{{ selected_batch.notes }}</textarea>
+        </label>
+        <label>池状态
+          <select name="status" data-form-hint-target="status">
+            {% for key, label in status_labels.items() %}
+            <option value="{{ key }}" {% if selected.status == key %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <p class="hint" data-form-hint-target="hint">出灰前须最近批次峰值已记且 ≥ 60℃。</p>
+        <button type="submit">保存作业记录</button>
+      </form>
+      {% endif %}
+    </div>
+    {% else %}
+    <div class="drawer-head">
+      <div>
+        <h2>池位详情</h2>
+        <p>点击平面图瓦片打开</p>
+      </div>
+    </div>
+    {% endif %}
+  </aside>
+</section>
+{% endblock %}

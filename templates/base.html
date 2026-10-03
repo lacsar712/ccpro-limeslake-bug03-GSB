@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{% block title %}LimeSlake{% endblock %} · 石灰熟化池</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/theme.css') }}" />
+  <script type="module" src="https://unpkg.com/@hotwired/stimulus@3.2.2/dist/stimulus.js"></script>
+  <script type="module" src="{{ url_for('static', filename='js/controllers.js') }}"></script>
+</head>
+<body>
+  <div class="ops-shell">
+    <header class="topbar">
+      <div class="brand-row">
+        <span class="brand-mark">石灰</span>
+        <div>
+          <strong>LimeSlake</strong>
+          <small>熟化池作业板</small>
+        </div>
+      </div>
+      <nav class="top-nav">
+        <a href="{{ url_for('board.floor_plan') }}" class="{% if request.blueprint == 'board' %}active{% endif %}">平面图</a>
+        <a href="{{ url_for('auth.logout') }}">退出</a>
+      </nav>
+    </header>
+    <main class="ops-main">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          <div class="flash-stack" data-controller="flash">
+            {% for category, message in messages %}
+              <div class="flash flash-{{ category }}" data-flash-target="item">{{ message }}</div>
+            {% endfor %}
+          </div>
+        {% endif %}
+      {% endwith %}
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+</body>
+</html>

@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}{% if batch %}编辑批次{% else %}登记批次{% endif %}{% endblock %}
+{% block content %}
+<header class="page-head">
+  <div>
+    <h1>{% if batch %}编辑熟化批次{% else %}登记熟化批次{% endif %}</h1>
+  </div>
+</header>
+<form class="panel" method="post">
+  <label>熟化池
+    <select name="pond_id" required>
+      {% for pond in ponds %}
+      <option value="{{ pond.id }}" {% if batch and batch.pond_id == pond.id %}selected{% endif %}>{{ pond.code }} · {{ pond.plant.name }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <label>开始时间
+    <input name="started_at" type="datetime-local"
+      value="{% if batch %}{{ batch.started_at.strftime('%Y-%m-%dT%H:%M') }}{% endif %}" />
+  </label>
+  <label>目标温度 ℃
+    <input name="target_temp_c" type="number" step="0.1" value="{{ batch.target_temp_c if batch else 80 }}" required />
+  </label>
+  <label>峰值温度 ℃（可空）
+    <input name="peak_temp_c" type="number" step="0.1" value="{{ batch.peak_temp_c if batch and batch.peak_temp_c is not none else '' }}" />
+  </label>
+  <label>备注
+    <textarea name="notes" rows="3">{{ batch.notes if batch else '' }}</textarea>
+  </label>
+  <div class="actions">
+    <button type="submit">保存</button>
+    <a class="btn ghost" href="{{ url_for('board.floor_plan') }}">返回平面图</a>
+  </div>
+</form>
+{% endblock %}

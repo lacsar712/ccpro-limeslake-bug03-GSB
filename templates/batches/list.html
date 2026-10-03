@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}熟化批次{% endblock %}
+{% block content %}
+<header class="page-head">
+  <div>
+    <h1>熟化批次</h1>
+    <p>记录每池熟化起温与峰值，供出灰规则核验。</p>
+  </div>
+  <a class="btn" href="{{ url_for('batches.create_batch') }}">登记批次</a>
+</header>
+<table class="data-table">
+  <thead>
+    <tr>
+      <th>池号</th>
+      <th>开始时间</th>
+      <th>目标温度 ℃</th>
+      <th>峰值温度 ℃</th>
+      <th>备注</th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for batch in batches %}
+    <tr>
+      <td>{{ batch.pond.code }}</td>
+      <td>{{ batch.started_at }}</td>
+      <td>{{ '%.1f'|format(batch.target_temp_c) }}</td>
+      <td>{% if batch.peak_temp_c is not none %}{{ '%.1f'|format(batch.peak_temp_c) }}{% else %}—{% endif %}</td>
+      <td>{{ batch.notes }}</td>
+      <td><a href="{{ url_for('batches.edit_batch', batch_id=batch.id) }}">编辑</a></td>
+    </tr>
+    {% else %}
+    <tr><td colspan="6">暂无批次</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

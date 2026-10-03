@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>登录 · LimeSlake</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/theme.css') }}" />
+</head>
+<body class="login-body">
+  <form class="login-card" method="post" action="{{ url_for('auth.login') }}">
+    <h1>LimeSlake</h1>
+    <p>石灰熟化池作业板</p>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for category, message in messages %}
+        <div class="flash flash-{{ category }}">{{ message }}</div>
+      {% endfor %}
+    {% endwith %}
+    <label>用户名
+      <input name="username" value="admin" autocomplete="username" required />
+    </label>
+    <label>密码
+      <input name="password" type="password" value="123456" autocomplete="current-password" required />
+    </label>
+    <button type="submit">进入厂区</button>
+    <p class="hint">演示账号：admin / 123456 · worker / 123456</p>
+  </form>
+</body>
+</html>

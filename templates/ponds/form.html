@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}{% if pond %}编辑熟化池{% else %}新建熟化池{% endif %}{% endblock %}
+{% block content %}
+<header class="page-head">
+  <div>
+    <h1>{% if pond %}编辑熟化池{% else %}新建熟化池{% endif %}</h1>
+    <p>将状态设为「已出灰」时，系统会校验最近批次峰值温度 ≥ 60℃。</p>
+  </div>
+</header>
+<form class="panel" method="post" data-controller="form-hint">
+  <label>厂区
+    <select name="plant_id" required>
+      {% for plant in plants %}
+      <option value="{{ plant.id }}" {% if pond and pond.plant_id == plant.id %}selected{% endif %}>{{ plant.name }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <label>池号
+    <input name="code" value="{{ pond.code if pond else '' }}" required />
+  </label>
+  <label>状态
+    <select name="status" data-form-hint-target="status">
+      {% for key, label in status_labels.items() %}
+      <option value="{{ key }}" {% if pond and pond.status == key %}selected{% elif not pond and key == 'filling' %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <label>容量 m³
+    <input name="capacity_m3" type="number" step="0.1" value="{{ pond.capacity_m3 if pond else 40 }}" />
+  </label>
+  <label>备注
+    <textarea name="notes" rows="3">{{ pond.notes if pond else '' }}</textarea>
+  </label>
+  <p class="hint" data-form-hint-target="hint">出灰前请确认最近熟化批次已记录峰值温度且不低于 60℃。</p>
+  <div class="actions">
+    <button type="submit">保存</button>
+    <a class="btn ghost" href="{{ url_for('board.floor_plan') }}">返回平面图</a>
+  </div>
+</form>
+{% endblock %}

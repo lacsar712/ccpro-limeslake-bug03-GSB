@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}熟化池{% endblock %}
+{% block content %}
+<header class="page-head">
+  <div>
+    <h1>熟化池</h1>
+    <p>按厂区管理池号与状态；出灰需满足峰值温度规则。</p>
+  </div>
+  <a class="btn" href="{{ url_for('ponds.create_pond') }}">新建熟化池</a>
+</header>
+<table class="data-table">
+  <thead>
+    <tr>
+      <th>厂区</th>
+      <th>池号</th>
+      <th>状态</th>
+      <th>容量 m³</th>
+      <th>备注</th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for pond, shown in pond_rows %}
+    <tr>
+      <td>{{ pond.plant.name }}</td>
+      <td>{{ pond.code }}</td>
+      <td><span class="badge badge-{{ shown }}">{{ status_labels.get(shown, shown) }}</span></td>
+      <td>{{ '%.1f'|format(pond.capacity_m3) }}</td>
+      <td>{{ pond.notes }}</td>
+      <td><a href="{{ url_for('ponds.edit_pond', pond_id=pond.id) }}">编辑</a></td>
+    </tr>
+    {% else %}
+    <tr><td colspan="6">暂无熟化池</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

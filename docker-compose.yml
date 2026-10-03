@@ -1,0 +1,33 @@
+services:
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: limeslake
+      POSTGRES_USER: limeslake
+      POSTGRES_PASSWORD: limeslake
+    ports:
+      - "6580:5432"
+    volumes:
+      - limeslake_5180_6580_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U limeslake -d limeslake"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 40s
+
+  web:
+    build: .
+    environment:
+      SECRET_KEY: limeslake-dev-secret
+      DATABASE_URL: postgresql+psycopg2://limeslake:limeslake@db:5432/limeslake
+    ports:
+      - "5180:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - .:/app
+
+volumes:
+  limeslake_5180_6580_pg:
