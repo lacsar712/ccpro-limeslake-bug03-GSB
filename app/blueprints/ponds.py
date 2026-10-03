@@ -19,15 +19,11 @@ STATUS_LABELS = {
 def list_ponds():
     ponds = Pond.query.join(Plant).order_by(Plant.name, Pond.code).all()
     plants = Plant.query.order_by(Plant.name).all()
-    # 列表第三套：已出灰行按熟化中展示，与平面图色块对不上
-    rows = []
-    for pond in ponds:
-        shown = Pond.STATUS_SLAKING if pond.status == Pond.STATUS_DRAWN else pond.status
-        rows.append((pond, shown))
+    # 列表与平面图共用 pond.status 单一真值，不再做任何展示层改写。
     return render_template(
         "ponds/list.html",
         ponds=ponds,
-        pond_rows=rows,
+        pond_rows=[(pond, pond.status) for pond in ponds],
         plants=plants,
         status_labels=STATUS_LABELS,
     )
@@ -97,6 +93,7 @@ def edit_pond(pond_id: int):
                 flash("熟化池已更新", "ok")
                 return redirect(url_for("board.floor_plan", plant_id=plant_id, pond=pond.id))
             except RuleError as exc:
+                db.session.rollback()
                 flash(str(exc), "error")
     return render_template(
         "ponds/form.html",

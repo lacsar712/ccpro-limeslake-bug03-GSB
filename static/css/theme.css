@@ -425,3 +425,5 @@ button:hover, .btn:hover { background: #1e293b; }
   .floor-head { flex-direction: column; }
   .pond-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+
+.hint.is-locked { color: var(--drawn-ink); font-weight: 600; }

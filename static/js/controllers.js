@@ -16,15 +16,16 @@ class FlashController extends Controller {
 
 class FormHintController extends Controller {
   static targets = ["status", "hint"]
+  static values = { locked: Boolean }
   connect() {
     this.update()
     this.statusTarget?.addEventListener("change", () => this.update())
   }
   update() {
     if (!this.hasHintTarget || !this.hasStatusTarget) return
-    if (this.statusTarget.value === "drawn") {
+    if (this.lockedValue || this.statusTarget.value === "drawn") {
       this.hintTarget.textContent =
-        "当前选择「已出灰」：须存在最近批次，且峰值温度已记录并 ≥ 60℃。"
+        "当前池位「已出灰」：峰值温度与池状态均已锁定，不能再修改。"
     } else {
       this.hintTarget.textContent =
         "出灰前请确认最近熟化批次已记录峰值温度且不低于 60℃。"

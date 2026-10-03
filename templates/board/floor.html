@@ -102,11 +102,13 @@
       </section>
 
       {% if selected_batch %}
+      {% set is_drawn = selected.status == 'drawn' %}
       <form
         class="ops-form"
         method="post"
         action="{{ url_for('board.pond_ops', pond_id=selected.id) }}"
         data-controller="form-hint"
+        {% if is_drawn %}data-form-hint-locked-value="true"{% endif %}
       >
         <label>登记 / 修正峰值温度 ℃
           <input
@@ -115,19 +117,31 @@
             step="0.1"
             value="{{ selected_batch.peak_temp_c if selected_batch.peak_temp_c is not none else '' }}"
             placeholder="例如 72"
+            {% if is_drawn %}disabled title="已出灰后峰值锁定"{% endif %}
           />
         </label>
+        {% if is_drawn %}
+        <p class="hint is-locked">该池已出灰，峰值温度已锁定，不能再登记或修正。</p>
+        {% endif %}
         <label>批次备注
           <textarea name="batch_notes" rows="2">{{ selected_batch.notes }}</textarea>
         </label>
         <label>池状态
-          <select name="status" data-form-hint-target="status">
+          <select
+            name="status"
+            data-form-hint-target="status"
+            {% if is_drawn %}disabled title="已出灰为终态，不可改回"{% endif %}
+          >
             {% for key, label in status_labels.items() %}
             <option value="{{ key }}" {% if selected.status == key %}selected{% endif %}>{{ label }}</option>
             {% endfor %}
           </select>
         </label>
+        {% if is_drawn %}
+        <p class="hint is-locked">已出灰为终态，池位状态不可改回熟化中或注水中。</p>
+        {% else %}
         <p class="hint" data-form-hint-target="hint">出灰前须最近批次峰值已记且 ≥ 60℃。</p>
+        {% endif %}
         <button type="submit">保存作业记录</button>
       </form>
       {% endif %}

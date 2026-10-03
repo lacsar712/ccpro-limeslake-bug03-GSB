@@ -7,7 +7,7 @@
     <p>将状态设为「已出灰」时，系统会校验最近批次峰值温度 ≥ 60℃。</p>
   </div>
 </header>
-<form class="panel" method="post" data-controller="form-hint">
+<form class="panel" method="post" data-controller="form-hint" {% if pond and pond.status == 'drawn' %}data-form-hint-locked-value="true"{% endif %}>
   <label>厂区
     <select name="plant_id" required>
       {% for plant in plants %}
@@ -19,7 +19,11 @@
     <input name="code" value="{{ pond.code if pond else '' }}" required />
   </label>
   <label>状态
-    <select name="status" data-form-hint-target="status">
+    <select
+      name="status"
+      data-form-hint-target="status"
+      {% if pond and pond.status == 'drawn' %}disabled title="已出灰为终态，不可改回"{% endif %}
+    >
       {% for key, label in status_labels.items() %}
       <option value="{{ key }}" {% if pond and pond.status == key %}selected{% elif not pond and key == 'filling' %}selected{% endif %}>{{ label }}</option>
       {% endfor %}
